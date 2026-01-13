@@ -1,0 +1,180 @@
+library(haven)
+library(dplyr)
+library(ggplot2)
+library(GGally)
+library(corrplot)
+library(gridExtra)
+library(DataExplorer)
+library(grid)
+
+
+Location <- "path"
+Customerdf <- as.data.frame(read_sav(Location))
+
+
+# 1. CHURN SETUP
+
+Customerdf$churn <- tolower(Customerdf$Contract_extended) == "false"
+Customerdf$churn_numeric <- as.numeric(Customerdf$churn)
+Customerdf$churn_label <- ifelse(Customerdf$churn_numeric == 1, "Churned", "Retained")
+
+# Summary
+churn_count <- sum(Customerdf$churn_numeric, na.rm = TRUE)
+retain_count <- sum(1 - Customerdf$churn_numeric, na.rm = TRUE)
+total_customers <- churn_count + retain_count
+churn_rate <- churn_count / total_customers
+churn_rate_pct <- round(100 * churn_rate, 2)
+
+# Print summary
+
+summary_table <- data.frame(
+  Metric = c("Churned", "Retained", "Total Customers", "Churn Rate (%)"),
+  Value  = c(churn_count, retain_count, total_customers, churn_rate_pct)
+)
+
+plot.new()
+grid.table(summary_table)
+
+
+# 2. CLV ANALYSIS
+
+Customerdf$clv <- as.numeric(Customerdf$clv)
+
+ggplot(Customerdf, aes(x = churn_label, y = clv, fill = churn_label)) +
+  geom_boxplot() +
+  scale_fill_manual(values = c("Retained" = "#00BFC4", "Churned" = "#F8766D")) +
+  labs(title = "CLV by Churn Status", x = "", y = "Customer Lifetime Value")
+
+# Correlation text
+plot.new()
+text(0.5, 0.5,
+     paste("Correlation CLV vs Churn:",
+           round(cor(Customerdf$clv, Customerdf$churn_numeric,
+                     use = "complete.obs"), 3)))
+
+
+# 3. CUSTOMER TYPE 
+
+
+Customerdf$cust_type <- factor(Customerdf$cust_type)
+
+ggplot(Customerdf, aes(x = cust_type, fill = churn_label)) +
+  geom_bar(position = "fill") +
+  scale_fill_manual(values = c("Retained" = "#00BFC4", "Churned" = "#F8766D")) +
+  labs(title = "Churn Rate by Customer Type", y = "Proportion", x = "") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+# 5. INDUSTRY TYPE
+
+Customerdf$industry_type <- factor(Customerdf$industry_type)
+
+ggplot(Customerdf, aes(x = industry_type, fill = churn_label)) +
+  geom_bar(position = "fill") +
+  scale_fill_manual(values = c("Retained" = "#00BFC4", "Churned" = "#F8766D")) +
+  labs(title = "Churn Rate by Industry Type", y = "Proportion", x = "") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+# 6. TRAFFIC MODEL (LOGISTIC)
+
+Customerdf$Traffic_customercontacts_avg <- as.numeric(Customerdf$Traffic_customercontacts_avg)
+
+logit_mod <- glm(churn_numeric ~ Traffic_customercontacts_avg,
+                 data = Customerdf, family = binomial)
+
+traffic_seq <- seq(min(Customerdf$Traffic_customercontacts_avg, na.rm = TRUE),
+                   max(Customerdf$Traffic_customercontacts_avg, na.rm = TRUE),
+                   length.out = 100)
+
+pred_df <- data.frame(Traffic_customercontacts_avg = traffic_seq)
+pred_df$churn_prob <- predict(logit_mod, newdata = pred_df, type = "response")
+
+ggplot(pred_df, aes(x = Traffic_customercontacts_avg, y = churn_prob)) +
+  geom_line(color = "#F8766D", size = 1.2) +
+  labs(title = "Logistic Fit: Churn vs Traffic Volume",
+       x = "Traffic Volume", y = "Predicted Churn Probability")
+
+
+# 7. CPC 
+
+
+Customerdf$CPC <- as.numeric(Customerdf$CPC)
+
+ggplot(Customerdf, aes(x = churn_label, y = CPC, fill = churn_label)) +
+  geom_boxplot() +
+  scale_fill_manual(values = c("Retained" = "#00BFC4", "Churned" = "#F8766D")) +
+  labs(title = "CPC by Churn Status", x = "", y = "Cost per Click")+  coord_cartesian(ylim = c(0, 20))
+
+
+
+# 8. TOP CORRELATIONS WITH CHURN
+
+numeric_vars <- Customerdf %>% dplyr::select(where(is.numeric))
+
+pearson_corr <- sapply(numeric_vars, function(x)
+  cor(x, Customerdf$churn_numeric, method = "pearson", use = "complete.obs"))
+
+spearman_corr <- sapply(numeric_vars, function(x)
+  cor(x, Customerdf$churn_numeric, method = "spearman", use = "complete.obs"))
+
+cor_summary <- data.frame(
+  Feature  = names(pearson_corr),
+  Pearson  = round(pearson_corr, 3),
+  Spearman = round(spearman_corr, 3)
+)
+
+cor_summary$Abs_Spearman <- abs(cor_summary$Spearman)
+top_features <- cor_summary %>%
+  arrange(desc(Abs_Spearman)) %>%
+  head(10)
+
+ggplot(top_features, aes(x = reorder(Feature, Abs_Spearman))) +
+  geom_bar(aes(y = Spearman), stat = "identity", fill = "#F8766D") +
+  coord_flip() +
+  labs(title = "Top 10 Features Correlated with Churn",
+       x = "Feature", y = "Spearman Correlation")
+
+
+# 9. Financial impact OI 
+
+
+sum_yearly_OI  <- sum(Customerdf$OI, na.rm = TRUE)
+
+revenue_churn<- churn_rate * sum_yearly_OI
+
+# Print results
+cat("Sum Yearly OI (EUR):", format(round(sum_yearly_OI, 2),big.mark = ","), "\n")
+cat("Churn rate:", round(churn_rate*100, 4), "%\n")
+cat("Revenue churn per year(EUR):", format(round(revenue_churn, 2),big.mark = ","), "\n")
+
+
+###Predictor
+
+# Ensure categorical variables are factors
+Customerdf$industry_type <- as.factor(Customerdf$industry_type)
+Customerdf$cust_type     <- as.factor(Customerdf$cust_type)
+
+# Variables used in the model
+model_vars <- c(
+  "churn_numeric",
+  "CPC",
+  "clv",
+  "industry_type",
+  "cust_type"
+)
+
+# Create cleaned modeling dataset (drops rows with NA)
+Customerdf_model <- Customerdf %>%
+  dplyr::select(all_of(model_vars)) %>%
+  tidyr::drop_na()
+
+#Log model
+logit_rev <- glm(
+  churn_numeric ~ + CPC + clv  +
+    industry_type + cust_type,
+  data = Customerdf_model,
+  family = binomial
+)
+
+summary(logit_rev)
