@@ -20,7 +20,6 @@ The company wants:
 
 This repository delivers a complete churn analytics workflow for a digital services company seeking to understand:
 
-- Why customers churn
 - Which segments are most at risk
 - How churn impacts revenue
 - Which features predict churn most strongly
