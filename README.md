@@ -126,4 +126,4 @@ This quantifies the business cost of churn and supports ROI calculations for ret
 - Customer type
 - Interpret model coefficients and significance, Refine the model by eliminating variables that do not show statistical significance. 
 
-**11. Predictive Modeling**
+**11. Business Report**
