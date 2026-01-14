@@ -21,7 +21,7 @@ That means there could be some natural bias in what’s included (for example, C
 
 - *We also don’t know whether this is the full picture*
   
-Some important variables may be missing, such as customer satisfaction scores, support ticket history or competitor activity.
+Some important variables may be missing, such as number of customers (which is key in the churn % calculation), customer satisfaction scores, support ticket history or competitor activity.
 
 Even with these limitations, the dataset still gives enough clarity to explore the relationship between fuel type, mileage, and price, and to confidently answer the business owner’s main question.
 
