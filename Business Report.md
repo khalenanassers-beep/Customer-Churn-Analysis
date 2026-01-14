@@ -62,8 +62,10 @@ This also helps us identify the key metrics that influence churn:
 - It’s also interesting that Products(Produkte) is the largest industry in the dataset (66% of the customers) and has a 20% churn rate. Because of its size, even small improvements in retention there could make a meaningful difference for the business.
 - Customers without an industry category have an extremely high churn rate of 91.7% (there are only 24 customers). That’s a red flag worth highlighting but carefully due to size, since missing information often signals weaker relationships or poor data quality.
   
-4. Financial Impact
+5. Financial Impact
+   
    <img width="824" height="532" alt="image" src="https://github.com/user-attachments/assets/b2cd6360-ce98-4768-8f5f-d1451f28b87d" />
+   
 - With an expected order intake of EUR 9MM, the expected churn revnue for the next year its EUR 2.1 MM. Leaving a EU 7.8 MM expected revenue for next year. 
   
 ### Insights
